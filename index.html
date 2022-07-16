@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.css" />
+  <style>
+    #map {
+    width: auto;
+    height: 800px;
+    left:0;
+}
+.circle{
+    width: 3px;
+}
+.legend{
+    background-color: white;
+    opacity: 0.8;
+    padding:5px;
+    margin-right:5px;
+}
+
+  </style>
+</head>
+<body>
+   
+<div id="map"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.js"></script>
+  <script>
+
+    function getLegendColor(d) {
+            return d === 0  ? "#60BC56" :
+                d === 1  ? "#5AAFDF" :
+                d === 2 ? "#FEC250" :
+                d === 3 ? "#F79533" :
+                d === 4 ? "#EE3330" :
+                                "#EE3330";
+        }
+      
+    function getColor(psivalue){
+        if(psivalue >= 0 && psivalue <= 50){
+                return "#60BC56"
+        }
+        else if(psivalue >= 51 && psivalue <= 100){
+                return "#5AAFDF"
+        }
+        else if(psivalue >= 101 && psivalue <= 200)
+        {
+            return "#FEC250"
+        }
+        else if(psivalue >= 201 && psivalue <= 300)
+        {
+            return "#F79533"
+        }
+        else if(psivalue > 300)
+        {
+            return "#EE3330"
+        }
+    }
+    var url = "https://api.data.gov.sg/v1/environment/psi";
+    fetch(url).then(response => {
+      return response.json();
+    }).then(data => {
+
+        let tiles = new L.tileLayer('https://maps-{s}.onemap.sg/v3/Default/{z}/{x}/{y}.png', {
+        detectRetina: true,
+        maxZoom: 18,
+        minZoom: 11,
+        //Do not remove this attribution
+        attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;">' +
+                    'New OneMap | Map data © contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+        });
+                    
+     
+        let map = new L.Map("map", {
+            center: [1.347833, 103.809357], 
+            zoom: 12,
+            maxBounds: L.latLngBounds(L.latLng(1.2, 103.5), L.latLng(1.6, 104.3))
+            })
+            .addLayer(tiles);
+           
+            var region = data.region_metadata;
+            console.log(data.items[0].readings.psi_twenty_four_hourly);
+            var psireading = data.items[0].readings.psi_twenty_four_hourly;
+            console.log(region);
+            for(let i = 0; i < region.length; i++){
+                let location = region[i].name
+                let currentpsireading = psireading[location];
+                region[i].psireading = currentpsireading;
+                var circle = L.circle([region[i].label_location.latitude, region[i].label_location.longitude], {
+                color: getColor(currentpsireading),
+                fillOpacity: 0.5,
+                radius: 1000,
+                }).addTo(map);
+
+            var text = L.marker([region[i].label_location.latitude, region[i].label_location.longitude],
+            {
+                icon: L.divIcon({
+                className: "my-custom-icon",
+                html: `<div className="textPosition">${currentpsireading}</div>`,
+                }),
+            }
+            ).addTo(map);
+
+         
+
+        }
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+
+        var div = L.DomUtil.create('div', 'info legend');
+        labels = ['<strong>PSI Level</strong>'],
+        categories = ['Good (0-50)','Moderate (51-100)','Unhealthy (101-200)','Very Unhealthy (201-300)','Hazardous (Above 300)'];
+        color = ["#60BC56","#5AAFDF","#FEC250","#F79533","#EE3330"]
+        for (var i = 0; i < categories.length; i++) {
+                console.log(color[i]);
+                div.innerHTML += 
+                labels.push(
+                    '<i style="background:' + getLegendColor([i]) + '"></i>' +
+                (categories[i] ? categories[i] : '+'));
+
+            }
+            div.innerHTML = labels.join('<br>');
+        return div;
+        };
+        legend.addTo(map);
+
+            console.log(region);
+          //  res = sgmapArray.map(x => Object.assign(x, populationArray.find(y => y.Subzone.toUpperCase() == x.properties.Name.toUpperCase())));
+    });
+ 
+  </script>
+</body>
+</html>
